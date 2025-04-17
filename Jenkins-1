@@ -38,12 +38,4 @@ pipeline {
         }
     }
 
-    post {
-        success {
-            echo "Déploiement réussi ! L'application est disponible sur http://localhost:${env.HOST_PORT}"
-        }
-        failure {
-            echo "Échec du déploiement !"
-        }
-    }
-}
+  }
