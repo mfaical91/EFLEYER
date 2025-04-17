@@ -1,84 +1,36 @@
+
 pipeline {
     agent any
-
-    environment {
-        // Configurer les variables d'environnement si nécessaire
-        REPO_URL = 'git@github.com:mfaical91/EFLEYER.git'
-        DEPLOY_DIR = '/var/www/efleyer_demo'  // Dossier de déploiement sur le serveur
-        SERVER_IP = 'http://192.168.101.138'          // IP du serveur de démo
-        SSH_CREDENTIALS = 'squ_603e4842ca1bce3d13b29bb0d9eb5eeaefeb5edb'  // Identifiants SSH dans Jenkins
+    tools {
+        jdk 'jdk17'
+        nodejs 'node16'
     }
-
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+    }
     stages {
-        // Étape 1: Récupération du code depuis GitHub
-        stage('Checkout') {
+        stage('clean workspace') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],  // ou '*/master' selon votre branche
-                    userRemoteConfigs: [[url: env.REPO_URL, credentialsId: 'github_credentials']]
-                ])
+                cleanWs()
             }
         }
-
-        // Étape 2: Installation des dépendances (si nécessaire)
-        stage('Install Dependencies') {
+        stage('Checkout from Git') {
             steps {
-                sh '''
-                    echo "Aucune dépendance nécessaire pour un template HTML statique."
-                    # Si vous utilisez npm (ex: pour un build tool comme Gulp)
-                    # npm install
-                '''
+                git branch: 'main', url: 'https://github.com/mfaical91/EFLEYER.git'
             }
         }
-
-        // Étape 3: Build (optionnel pour un template statique)
-        stage('Build') {
-            steps {
-                sh '''
-                    echo "Aucune étape de build nécessaire pour HTML/CSS/JS pur."
-                    # Exemple: minifier les assets si besoin
-                    # npm run build
-                '''
-            }
-        }
-
-        // Étape 4: Déploiement sur le serveur via SSH
-        stage('Deploy to Server') {
+       
+        stage("quality gate") {
             steps {
                 script {
-                    // Transférer les fichiers via SSH (nécessite le plugin "Publish Over SSH")
-                    sshPublisher(
-                        publishers: [
-                            sshPublisherDesc(
-                                configName: SSH_CREDENTIALS,
-                                transfers: [
-                                    sshTransfer(
-                                        sourceFiles: '**/*',  // Tous les fichiers
-                                        removePrefix: '',      // Ne pas supprimer de préfixe
-                                        remoteDirectory: env.DEPLOY_DIR,
-                                        execCommand: """
-                                            cd ${env.DEPLOY_DIR}
-                                            echo "Déploiement réussi !"
-                                        """
-                                    )
-                                ]
-                            )
-                        ]
-                    )
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
                 }
             }
         }
-    }
-
-    // Post-actions (notifications, logs)
-    post {
-        success {
-            slackSend(message: "✅ Pipeline réussi - EFLEYER déployé: ${env.SERVER_IP}")
-            echo "Déploiement terminé !"
-        }
-        failure {
-            slackSend(message: "❌ Pipeline échoué - EFLEYER (${env.BUILD_URL})")
+        stage('Install Dependencies') {
+            steps {
+                sh "npm install"
+            }
         }
     }
 }
