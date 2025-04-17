@@ -1,36 +1,49 @@
-
 pipeline {
     agent any
-    tools {
-        jdk 'jdk17'
-        nodejs 'node16'
-    }
+
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
+        DOCKER_IMAGE = 'eflyer'
+        CONTAINER_NAME = 'eflyer-container'
+        HOST_PORT = '8080'
+        CONTAINER_PORT = '80'
     }
+
     stages {
-        stage('clean workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-        stage('Checkout from Git') {
-            steps {
-                git branch: 'main', url: 'https://github.com/mfaical91/EFLEYER.git'
-            }
-        }
-       
-        stage("quality gate") {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                    echo "Building Docker image..."
+                    sh "docker build -t ${env.DOCKER_IMAGE} ."
                 }
             }
         }
-        stage('Install Dependencies') {
+
+        stage('Stop and Remove Previous Container') {
             steps {
-                sh "npm install"
+                script {
+                    // Arrêter et supprimer le conteneur s'il existe déjà
+                    sh "docker stop ${env.CONTAINER_NAME} || true"
+                    sh "docker rm ${env.CONTAINER_NAME} || true"
+                }
             }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                script {
+                    echo "Running Docker container..."
+                    sh "docker run -d -p ${env.HOST_PORT}:${env.CONTAINER_PORT} --name ${env.CONTAINER_NAME} ${env.DOCKER_IMAGE}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Déploiement réussi ! L'application est disponible sur http://localhost:${env.HOST_PORT}"
+        }
+        failure {
+            echo "Échec du déploiement !"
         }
     }
 }
