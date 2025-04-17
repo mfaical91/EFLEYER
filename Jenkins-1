@@ -2,40 +2,69 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'eflyer'
-        CONTAINER_NAME = 'eflyer-container'
-        HOST_PORT = '8080'
-        CONTAINER_PORT = '80'
+        IMAGE_NAME = 'efleyer-app'
+        DOCKER_REGISTRY = 'faical194' // Remplace ça si tu pushes vers Docker Hub
+        DOCKER_CREDENTIALS_ID = 'mfaical91' // ID des identifiants dans Jenkins
     }
 
     stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Building Docker image..."
-                    sh "docker build -t ${env.DOCKER_IMAGE} ."
+                    dockerImage = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
                 }
             }
         }
 
-        stage('Stop and Remove Previous Container') {
+        stage('Test') {
             steps {
                 script {
-                    // Arrêter et supprimer le conteneur s'il existe déjà
-                    sh "docker stop ${env.CONTAINER_NAME} || true"
-                    sh "docker rm ${env.CONTAINER_NAME} || true"
+                    echo 'Tests à implémenter selon ta stack (ex: npm test, pytest, etc.)'
+                    // Exemple pour Node.js :
+                    // sh 'npm install'
+                    // sh 'npm test'
                 }
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Push to Docker Registry') {
             steps {
                 script {
-                    echo "Running Docker container..."
-                    
+                    docker.withRegistry("https://index.docker.io/v1/", "${DOCKER_CREDENTIALS_ID}") {
+                        dockerImage.push("${BUILD_NUMBER}")
+                        dockerImage.push("latest")
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    echo 'Déploiement en cours...'
+                    // Exemple si tu utilises Docker Compose
+                    // sh 'docker-compose down'
+                    // sh 'docker-compose up -d --build'
                 }
             }
         }
     }
 
-  }
+    post {
+        always {
+            echo 'Pipeline terminé.'
+        }
+        success {
+            echo 'Déploiement réussi !'
+        }
+        failure {
+            echo 'Échec du pipeline.'
+        }
+    }
+}
