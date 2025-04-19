@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_REGISTRY = 'docker.io/ton-username/efleyer' // Remplacez par votre registry si applicable
+        DOCKER_REGISTRY = 'docker.io/faical194/efleyer' // Remplacez par votre registry si applicable
         DEV_SERVER = '192.168.101.138' // Remplacez par l'adresse/credentials de votre serveur dev
         PROD_SERVER = '192.168.101.140' // Remplacez par l'adresse/credentials de votre serveur prod
         IMAGE_NAME = 'efleyer'
