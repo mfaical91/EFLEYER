@@ -1,19 +1,11 @@
-# Étape 1 : Utiliser une image de base contenant Apache et Node.js
-FROM node:16-buster
+# Utiliser l'image de base officielle Nginx
+FROM nginx:alpine
 
-# Installer Apache
-RUN apt-get update && apt-get install -y apache2
+# Copier les fichiers de votre site dans le répertoire approprié de Nginx
+COPY . /usr/share/nginx/html
 
-# Copier le code de l'application dans le container
-WORKDIR /var/www/html
-COPY . .
-
-# Installer les dépendances Node.js
-RUN npm install
-
-# Exposer le port 80 pour Apache et 3000 pour Node.js
+# Exposer le port 80 pour que le site soit accessible
 EXPOSE 80
-EXPOSE 3000
 
-# Démarrer Apache en mode foreground et l'application Node.js
-CMD service apache2 start && npm start
+# Lancer Nginx au démarrage
+CMD ["nginx", "-g", "daemon off;"]
