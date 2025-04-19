@@ -1,14 +1,18 @@
-pipeline {
+  
+   pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'mfaical91/efleyer'
+        REGISTRY_CREDENTIALS = credentials('dev-server-credentials') // ID des identifiants Jenkins
+        IMAGE_NAME = 'faical194/efleyer'
+        DOCKER_IMAGE  = 'efleyer'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
+        REGISTRY_URL = 'docker.io/faical194' // Remplacez par votre registre Docker
         DEV_SERVER = 'ubuntu@192.168.101.138'
         PROD_SERVER = 'ubuntu@192.168.101.140'
     }
 
-    stages {
+     stages {
         stage('Checkout') {
             steps {
                 checkout scm
@@ -34,42 +38,35 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to Development Server') {
             steps {
-                script {
-                    def targetServer
-                    def containerName
-                    def port
+                sshagent (credentials: ['ssh-credentials-id']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${DEV_SERVER} '
+                            docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
+                            docker stop efleyer-dev || true &&
+                            docker rm efleyer-dev || true &&
+                            docker run -d --name efleyer-dev -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                        '
+                    """
+                }
+            }
+        }
 
-                    if (env.BRANCH_NAME == 'develop') {
-                        targetServer = DEV_SERVER
-                        containerName = "efleyer-dev"
-                        port = "8080:80"
-                    } else if (env.BRANCH_NAME == 'main') {
-                        input message: "Déployer en production ?"
-                        targetServer = PROD_SERVER
-                        containerName = "efleyer-prod"
-                        port = "80:80"
-                    } else {
-                        error("Branche non déployable automatiquement : ${env.BRANCH_NAME}")
-                    }
-
-                    sshagent (credentials: ['ssh-credentials-id']) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${targetServer} '
-                                docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
-                                docker stop ${containerName} || true &&
-                                docker rm ${containerName} || true &&
-                                docker run -d --name ${containerName} -p ${port} ${IMAGE_NAME}:${IMAGE_TAG}
-                            '
-                        """
-                    }
+        stage('Deploy to Production Server') {
+            steps {
+                input message: 'Déployer en production ?'
+                sshagent (credentials: ['ssh-credentials-id']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${PROD_SERVER} '
+                            docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
+                            docker stop efleyer-prod || true &&
+                            docker rm efleyer-prod || true &&
+                            docker run -d --name efleyer-prod -p 80:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                        '
+                    """
                 }
             }
         }
     }
 }
-
-
-
-  
