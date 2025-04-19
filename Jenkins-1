@@ -4,7 +4,7 @@
 
     environment {
         REGISTRY_CREDENTIALS = credentials('dev-server-credentials') // ID des identifiants Jenkins
-        IMAGE_NAME = 'mfaical91/efleyer'
+        IMAGE_NAME = 'faical194/efleyer'
         DOCKER_IMAGE  = 'efleyer'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         REGISTRY_URL = 'docker.io/faical194' // Remplacez par votre registre Docker
