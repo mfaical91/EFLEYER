@@ -14,8 +14,8 @@
     stages {
         stage('Cloner le dépôt') {
             steps {
-                git url: 'https://github.com/mfaical91/EFLEYER.git', branch: 'main'
-            }
+                  sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
+                 }
         }
 
         stage('Construire l\'image Docker') {
@@ -27,13 +27,16 @@
         }
 
         stage('Pousser l\'image vers le registre') {
-            steps {
-                script {
-                    docker.withRegistry("https://${REGISTRY_URL}", 'docker-registry-credentials') {
-                        dockerImage.push()
-                    }
-                }
+           steps {
+            withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                sh """
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                    docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
+                    docker push ${DOCKER_IMAGE}:latest
+                """
             }
+        }
         }
 
         stage('Déployer sur le serveur de développement') {
