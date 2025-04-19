@@ -1,108 +1,76 @@
-pipeline {
+  
+   pipeline {
     agent any
-    
+
     environment {
-        def DOCKER_REGISTRY = 'docker.io/faical194/efleyer' // Remplacez par votre registry si applicable
-        def DEV_SERVER = '192.168.101.138' // Remplacez par l'adresse/credentials de votre serveur dev
-        def PROD_SERVER = '192.168.101.140' // Remplacez par l'adresse/credentials de votre serveur prod
-        def IMAGE_NAME = 'efleyer'
-        def WORKSPACE = '/home/ubuntu'
-        def VERSION = "${env.BUILD_ID}"
+        REGISTRY_CREDENTIALS = credentials('dev-server-credentials') // ID des identifiants Jenkins
+        IMAGE_NAME = 'efleyer'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        REGISTRY_URL = 'docker.io/faical194' // Remplacez par votre registre Docker
+        DEV_SERVER = 'ubuntu@192.168.101.138'
+        PROD_SERVER = 'ubuntu@192.168.101.140'
     }
-    
+
     stages {
-        stage('Checkout') {
+        stage('Cloner le dépôt') {
             steps {
-                git branch: 'main', url: 'https://github.com/mfaical91/EFLEYER.git'
+                git url: 'https://github.com/mfaical91/EFLEYER.git', branch: 'main'
             }
         }
-        
-        stage('Build Docker Image') {
+
+        stage('Construire l\'image Docker') {
             steps {
                 script {
-                    // Se connecter au serveur de dev
-                    withCredentials([sshUserPrivateKey(credentialsId: 'dev-server-credentials', keyFileVariable: 'DEV_SSH_KEY')]) {
-                        sh """
-                            ssh -i $DEV_SSH_KEY ${DEV_SERVER} "
-                                cd ${WORKSPACE} && 
-                                docker build -t ${IMAGE_NAME}:${VERSION} .
-                            "
-                        """
+                    dockerImage = docker.build("${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}")
+                }
+            }
+        }
+
+        stage('Pousser l\'image vers le registre') {
+            steps {
+                script {
+                    docker.withRegistry("https://${REGISTRY_URL}", 'docker-registry-credentials') {
+                        dockerImage.push()
                     }
                 }
             }
         }
-        
-        stage('Push to Registry (Optionnel)') {
-            when {
-                expression { return env.DOCKER_REGISTRY != null }
-            }
+
+        stage('Déployer sur le serveur de développement') {
             steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'docker-registry-creds', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh """
-                            ssh -i $DEV_SSH_KEY ${DEV_SERVER} "
-                                docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} ${DOCKER_REGISTRY} &&
-                                docker tag ${IMAGE_NAME}:${VERSION} ${DOCKER_REGISTRY}/${IMAGE_NAME}:${VERSION} &&
-                                docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:${VERSION}
-                            "
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Deploy to Production') {
-            steps {
-                script {
-                    // Se connecter au serveur de production
-                    withCredentials([sshUserPrivateKey(credentialsId: 'prod-server-credentials', keyFileVariable: 'PROD_SSH_KEY')]) {
-                        if (env.DOCKER_REGISTRY) {
-                            // Si on utilise un registry
-                            sh """
-                                ssh -i $PROD_SSH_KEY ${PROD_SERVER} "
-                                    docker pull ${DOCKER_REGISTRY}/${IMAGE_NAME}:${VERSION} &&
-                                    docker stop ${IMAGE_NAME} || true &&
-                                    docker rm ${IMAGE_NAME} || true &&
-                                    docker run -d --name ${IMAGE_NAME} -p 80:80 ${DOCKER_REGISTRY}/${IMAGE_NAME}:${VERSION}
-                                "
-                            """
-                        } else {
-                            // Si on transfère directement l'image
-                            sh """
-                                ssh -i $DEV_SSH_KEY ${DEV_SERVER} "docker save ${IMAGE_NAME}:${VERSION}" | 
-                                ssh -i $PROD_SSH_KEY ${PROD_SERVER} "docker load"
-                                
-                                ssh -i $PROD_SSH_KEY ${PROD_SERVER} "
-                                    docker stop ${IMAGE_NAME} || true &&
-                                    docker rm ${IMAGE_NAME} || true &&
-                                    docker run -d --name ${IMAGE_NAME} -p 80:80 ${IMAGE_NAME}:${VERSION}
-                                "
-                            """
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    post {
-        always {
-            echo 'Nettoyage...'
-            script {
-                // Supprimer l'image du serveur de dev après déploiement
-                withCredentials([sshUserPrivateKey(credentialsId: 'dev-server-credentials', keyFileVariable: 'DEV_SSH_KEY')]) {
+                sshagent (credentials: ['ssh-dev-server']) {
                     sh """
-                        ssh -i $DEV_SSH_KEY ${DEV_SERVER} "docker rmi ${IMAGE_NAME}:${VERSION} || true"
+                        ssh -o StrictHostKeyChecking=no ${DEV_SERVER} '
+                            docker pull ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} &&
+                            docker stop efleyer-dev || true &&
+                            docker rm efleyer-dev || true &&
+                            docker run -d --name efleyer-dev -p 8080:80 ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+                        '
                     """
                 }
             }
         }
-        success {
-            echo 'Déploiement réussi!'
+
+        stage('Validation manuelle pour la production') {
+            steps {
+                input message: 'Souhaitez-vous déployer en production ?'
+            }
         }
-        failure {
-            echo 'Échec du déploiement!'
+
+        stage('Déployer sur le serveur de production') {
+            steps {
+                sshagent (credentials: ['ssh-prod-server']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${PROD_SERVER} '
+                            docker pull ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} &&
+                            docker stop efleyer-prod || true &&
+                            docker rm efleyer-prod || true &&
+                            docker run -d --name efleyer-prod -p 80:80 ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+                        '
+                    """
+                }
+            }
         }
     }
 }
+
