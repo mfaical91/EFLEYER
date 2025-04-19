@@ -6,7 +6,6 @@ pipeline {
         def DEV_SERVER = '192.168.101.138' // Remplacez par l'adresse/credentials de votre serveur dev
         def PROD_SERVER = '192.168.101.140' // Remplacez par l'adresse/credentials de votre serveur prod
         def IMAGE_NAME = 'efleyer'
-        //DEV_SSH_KEY = 'key.pem'
         def WORKSPACE = '/home/ubuntu'
         def VERSION = "${env.BUILD_ID}"
     }
