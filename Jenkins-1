@@ -12,64 +12,57 @@
         PROD_SERVER = 'ubuntu@192.168.101.140'
     }
 
-    stages {
-        stage('Cloner le dépôt') {
+     stages {
+        stage('Checkout') {
             steps {
-                  sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
-                 }
+                checkout scm
+            }
         }
 
-        stage('Construire l\'image Docker') {
+        stage('Build Docker Image') {
             steps {
-                script {
-                    dockerImage = docker.build("${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}")
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
+                    """
                 }
             }
         }
 
-        stage('Pousser l\'image vers le registre') {
-           steps {
-            withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                sh """
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                    docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
-                    docker push ${DOCKER_IMAGE}:latest
-                """
-            }
-        }
-        }
-
-        stage('Déployer sur le serveur de développement') {
+        stage('Deploy to Development Server') {
             steps {
-                sshagent (credentials: ['ssh-dev-server']) {
+                sshagent (credentials: ['ssh-credentials-id']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${DEV_SERVER} '
-                            docker pull ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} &&
+                            docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop efleyer-dev || true &&
                             docker rm efleyer-dev || true &&
-                            docker run -d --name efleyer-dev -p 8080:80 ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name efleyer-dev -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
             }
         }
 
-        stage('Validation manuelle pour la production') {
+        stage('Deploy to Production Server') {
             steps {
-                input message: 'Souhaitez-vous déployer en production ?'
-            }
-        }
-
-        stage('Déployer sur le serveur de production') {
-            steps {
-                sshagent (credentials: ['ssh-prod-server']) {
+                input message: 'Déployer en production ?'
+                sshagent (credentials: ['ssh-credentials-id']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${PROD_SERVER} '
-                            docker pull ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} &&
+                            docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop efleyer-prod || true &&
                             docker rm efleyer-prod || true &&
-                            docker run -d --name efleyer-prod -p 80:80 ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name efleyer-prod -p 80:80 ${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
@@ -77,4 +70,3 @@
         }
     }
 }
-
