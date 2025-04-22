@@ -38,7 +38,7 @@
             }
         }
 
-        stage('Deploy to Development Server') {
+        stage('Deploy to Development Dev Server ') {
             steps {
                 sshagent (credentials: ['ssh-credentials-id']) {
                     sh """
@@ -53,20 +53,6 @@
             }
         }
 
-        stage('Deploy to Production Server') {
-            steps {
-                input message: 'Déployer en production ?'
-                sshagent (credentials: ['ssh-credentials-id']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${PROD_SERVER} '
-                            docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
-                            docker stop efleyer-prod || true &&
-                            docker rm efleyer-prod || true &&
-                            docker run -d --name efleyer-prod -p 80:80 ${IMAGE_NAME}:${IMAGE_TAG}
-                        '
-                    """
-                }
-            }
-        }
+     
     }
 }
