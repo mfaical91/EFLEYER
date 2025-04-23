@@ -44,7 +44,7 @@
             steps {
                 sshagent (credentials: ['ssh-credentials-id']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ${DEV_SERVER} '
+                        ssh -o StrictHostKeyChecking=no ${TEST_SERVER} '
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop efleyer-dev || true &&
                             docker rm efleyer-dev || true &&
