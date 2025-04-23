@@ -6,10 +6,10 @@
         REGISTRY_CREDENTIALS = credentials('dev-server-credentials') // ID des identifiants Jenkins
         IMAGE_NAME = 'faical194/efleyer'
         DOCKER_IMAGE  = 'efleyer'
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        IMAGE_TAG = "${env.BUILD_NUMBER}-snapshoot"
         REGISTRY_URL = 'docker.io/faical194' // Remplacez par votre registre Docker
-        DEV_SERVER = 'ubuntu@192.168.101.138'
-        PROD_SERVER = 'ubuntu@192.168.101.140'
+        TEST_SERVER = 'ubuntu@192.168.101.138'
+       
     }
 
      stages {
@@ -38,11 +38,11 @@
             }
         }
 
-        stage('Deploy to Development Dev Server ') {
+        stage('Deploy to Testing Server ') {
             steps {
-                sshagent (credentials: ['ssh-credentials-id']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${DEV_SERVER} '
+                     withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                       sh """
+                        ssh -o StrictHostKeyChecking=no ${TEST_SERVER} '
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop efleyer-dev || true &&
                             docker rm efleyer-dev || true &&
