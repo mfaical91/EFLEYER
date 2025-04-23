@@ -38,11 +38,13 @@
             }
         }
 
-        stage('Deploy to Testing Server ') {
+
+
+        stage('Deploy to Development Dev Server ') {
             steps {
-                     withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                       sh """
-                        ssh -o StrictHostKeyChecking=no ${TEST_SERVER} '
+                sshagent (credentials: ['ssh-credentials-id']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${DEV_SERVER} '
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop efleyer-dev || true &&
                             docker rm efleyer-dev || true &&
