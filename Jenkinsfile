@@ -45,7 +45,7 @@ pipeline {
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker ps -q --filter ancestor=${IMAGE_NAME} | xargs -r docker stop || true &&
                             docker ps -q --filter ancestor=${IMAGE_NAME} | xargs -r docker rm  || true &&
-                            docker run -d --name ${DOCKER_IMAGE}:${IMAGE_TAG} -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name ${DOCKER_IMAGE}:latest -p 8080:80 ${IMAGE_NAME}:latest
                         '
                     """
                 }
