@@ -43,9 +43,9 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${TEST_SERVER} '
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
-                            docker stop ${DOCKER_IMAGE}-dev || true &&
-                            docker rm ${DOCKER_IMAGE}-dev || true &&
-                            docker run -d --name ${DOCKER_IMAGE}-dev -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker ps -q --filter ancestor=${IMAGE_NAME} | xargs -r docker stop || true &&
+                            docker ps -q --filter ancestor=${IMAGE_NAME} | xargs -r docker rm  || true &&
+                            docker run -d --name ${DOCKER_IMAGE}:${IMAGE_TAG} -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
