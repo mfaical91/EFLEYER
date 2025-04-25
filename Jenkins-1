@@ -3,12 +3,11 @@
     agent any
 
     environment {
-        REGISTRY_CREDENTIALS = credentials('dev-server-credentials') // ID des identifiants Jenkins
+        REGISTRY_CREDENTIALS = credentials('dev-server-credentials') 
         IMAGE_NAME = 'faical194/efleyer'
         DOCKER_IMAGE  = 'efleyer'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        REGISTRY_URL = 'docker.io/faical194' // Remplacez par votre registre Docker
-        DEV_SERVER = 'ubuntu@192.168.101.138'
+        REGISTRY_URL = 'docker.io/faical194'
         PROD_SERVER = 'ubuntu@192.168.101.140'
     }
 
@@ -42,7 +41,7 @@
             steps {
                 sshagent (credentials: ['ssh-credentials-id']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ${DEV_SERVER} '
+                        ssh -o StrictHostKeyChecking=no ${PROD_SERVER} '
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop efleyer-dev || true &&
                             docker rm efleyer-dev || true &&
