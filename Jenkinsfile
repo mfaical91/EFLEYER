@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY_CREDENTIALS = credentials('dockerhub-credentials-id') // login DockerHub
         DOCKER_IMAGE = 'efleyer'
         IMAGE_NAME = 'faical194/efleyer'
         PROD_SERVER = 'ubuntu@192.168.101.140'
@@ -12,7 +11,7 @@ pipeline {
     stages {
         stage('Pull Latest Image Locally (Optional)') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+               withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
                         echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
                         docker pull ${IMAGE_NAME}:latest
