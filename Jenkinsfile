@@ -5,7 +5,6 @@
     environment {
         REGISTRY_CREDENTIALS = credentials('dev-server-credentials') 
         IMAGE_NAME = 'faical194/efleyer'
-        DOCKER_IMAGE  = 'efleyer'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         REGISTRY_URL = 'docker.io/faical194'
         PROD_SERVER = 'ubuntu@192.168.101.140'
