@@ -4,8 +4,8 @@
 
     environment {
         REGISTRY_CREDENTIALS = credentials('dev-server-credentials') 
+        DOCKER_IMAGE = 'efleyer'
         IMAGE_NAME = 'faical194/efleyer'
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
         REGISTRY_URL = 'docker.io/faical194'
         PROD_SERVER = 'ubuntu@192.168.101.140'
     }
@@ -36,15 +36,15 @@
             }
         }
 
-        stage('Deploy to Development Dev Server ') {
+        stage('Deploy to PROD Server ') {
             steps {
                 sshagent (credentials: ['ssh-credentials-id']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${PROD_SERVER} '
+                            docker stop ${DOCKER_IMAGE}|| true &&
+                            docker rm ${DOCKER_IMAGE} || true &&
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
-                            docker stop efleyer-dev || true &&
-                            docker rm efleyer-dev || true &&
-                            docker run -d --name efleyer-dev -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name ${DOCKER_IMAGE} -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
