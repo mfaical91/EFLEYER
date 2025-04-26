@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         REGISTRY_CREDENTIALS = credentials('dockerhub-credentials-id') // login DockerHub
-        SSH_CREDENTIALS = 'ssh-credentials-id' // login SSH vers ton serveur
         DOCKER_IMAGE = 'efleyer'
         IMAGE_NAME = 'faical194/efleyer'
         PROD_SERVER = 'ubuntu@192.168.101.140'
@@ -24,7 +23,7 @@ pipeline {
 
         stage('Deploy to Production Server') {
             steps {
-                sshagent (credentials: ["${SSH_CREDENTIALS}"]) {
+               sshagent (credentials: ['ssh-credentials-id']) {
                     script {
                         try {
                             sh """
